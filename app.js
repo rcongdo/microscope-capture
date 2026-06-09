@@ -85,3 +85,27 @@ cameraSelect.addEventListener('change', async () => {
     showError('Could not switch camera. Please try again or reload.');
   }
 });
+
+captureBtn.addEventListener('click', () => {
+  const filename = filenameInput.value.trim() || timestampFilename();
+
+  const track = currentStream && currentStream.getVideoTracks()[0];
+  const settings = track ? track.getSettings() : {};
+  const width = settings.width || video.videoWidth;
+  const height = settings.height || video.videoHeight;
+
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, width, height);
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    filenameInput.value = timestampFilename();
+  }, 'image/png');
+});
