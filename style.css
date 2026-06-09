@@ -54,7 +54,12 @@ body {
   border: 1px solid #444;
   border-radius: 4px;
   padding: 4px 8px;
-  font-size: 14px;
+  font-size: 16px;
+}
+
+#camera-select:focus-visible {
+  outline: 2px solid #4a90d9;
+  outline-offset: 2px;
 }
 
 #preview {
@@ -82,7 +87,8 @@ body {
 }
 
 #filename-input:focus {
-  outline: none;
+  outline: 2px solid #4a90d9;
+  outline-offset: 0;
   border-color: #4a90d9;
 }
 
@@ -107,6 +113,16 @@ body {
 
 #capture-btn:active {
   background: #2a6099;
+}
+
+#capture-btn:focus-visible {
+  outline: 2px solid #4a90d9;
+  outline-offset: 2px;
+}
+
+#capture-btn:disabled {
+  background: #3a3a3a;
+  cursor: not-allowed;
 }
 
 .hidden {
