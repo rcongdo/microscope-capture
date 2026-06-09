@@ -8,7 +8,7 @@
 </head>
 <body>
   <div id="app">
-    <header id="top-bar">
+    <header id="top-bar" role="banner">
       <span id="app-title">Microscope Capture</span>
       <div id="camera-select-row">
         <label for="camera-select">Camera</label>
@@ -22,14 +22,14 @@
     <video id="preview" autoplay playsinline muted></video>
     <canvas id="capture-canvas" class="hidden"></canvas>
 
-    <footer id="bottom-bar">
+    <footer id="bottom-bar" role="contentinfo">
       <input type="text" id="filename-input" aria-label="Filename" placeholder="filename" />
       <span class="ext-label">.png</span>
       <button id="capture-btn">Capture</button>
     </footer>
 
-    <section id="info-panel" class="hidden" aria-label="Camera settings">
-      <h2>Camera Settings</h2>
+    <section id="info-panel" class="hidden" aria-labelledby="info-panel-heading">
+      <h2 id="info-panel-heading">Camera Settings</h2>
       <dl id="settings-grid"></dl>
     </section>
   </div>
