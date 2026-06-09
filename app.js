@@ -77,3 +77,7 @@ async function init() {
 }
 
 init();
+
+cameraSelect.addEventListener('change', () => {
+  startStream(cameraSelect.value);
+});
