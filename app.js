@@ -109,6 +109,8 @@ async function startStream(deviceId) {
   currentStream = await navigator.mediaDevices.getUserMedia(constraints);
   video.srcObject = currentStream;
   infoBtn.classList.remove('hidden');
+  video.classList.remove('hidden');
+  cameraSelect.closest('#camera-select-row').classList.remove('hidden');
 }
 
 async function populateCameraList() {
