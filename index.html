@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Microscope Capture</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="error-message" class="hidden"></div>
+
+    <div id="preview-area">
+      <div id="camera-select-row">
+        <label for="camera-select">Camera:</label>
+        <select id="camera-select"></select>
+      </div>
+      <video id="preview" autoplay playsinline></video>
+      <canvas id="capture-canvas" class="hidden"></canvas>
+    </div>
+
+    <div id="capture-bar">
+      <input type="text" id="filename-input" placeholder="filename" />
+      <span class="ext-label">.png</span>
+      <button id="capture-btn">Capture</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
