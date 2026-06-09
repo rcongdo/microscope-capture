@@ -14,6 +14,10 @@ function timestampFilename() {
 }
 
 function showError(message) {
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+  }
   errorMessage.textContent = message;
   errorMessage.classList.remove('hidden');
   video.classList.add('hidden');
@@ -31,7 +35,8 @@ async function startStream(deviceId) {
     currentStream.getTracks().forEach(t => t.stop());
   }
   const constraints = {
-    video: deviceId ? { deviceId: { exact: deviceId } } : true
+    video: deviceId ? { deviceId: { exact: deviceId } } : true,
+    audio: false
   };
   currentStream = await navigator.mediaDevices.getUserMedia(constraints);
   video.srcObject = currentStream;
@@ -61,8 +66,7 @@ async function init() {
     const hasDevices = await populateCameraList();
     if (!hasDevices) return;
     // Re-start with explicit deviceId so dropdown stays in sync
-    const firstDeviceId = cameraSelect.value;
-    if (firstDeviceId) await startStream(firstDeviceId);
+    await startStream(cameraSelect.value);
   } catch (err) {
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
       showError('Camera access was denied. Please allow camera access in your browser settings and reload the page.');
