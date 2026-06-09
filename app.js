@@ -87,7 +87,10 @@ cameraSelect.addEventListener('change', async () => {
 });
 
 captureBtn.addEventListener('click', () => {
-  const filename = filenameInput.value.trim() || timestampFilename();
+  if (!currentStream || video.readyState < 2) return;
+
+  const rawName = filenameInput.value.trim() || timestampFilename();
+  const filename = rawName.replace(/[/\\:*?"<>|]/g, '_');
 
   const track = currentStream && currentStream.getVideoTracks()[0];
   const settings = track ? track.getSettings() : {};
@@ -100,12 +103,18 @@ captureBtn.addEventListener('click', () => {
   ctx.drawImage(video, 0, 0, width, height);
 
   canvas.toBlob(blob => {
+    if (!blob) {
+      showError('Capture failed: could not encode the frame. Please try again.');
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${filename}.png`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
     filenameInput.value = timestampFilename();
   }, 'image/png');
 });
