@@ -228,6 +228,42 @@ body {
   color: #c5c8d6;
 }
 
+/* ── Capture preview ── */
+
+#capture-preview {
+  width: 100%;
+  min-height: 0;
+  max-height: calc(100vh - 52px - 56px);
+  object-fit: contain;
+  display: block;
+  background: #000;
+}
+
+/* ── Retake button ── */
+
+#retake-btn {
+  background: transparent;
+  color: #8b8fa8;
+  border: 1px solid #3a3d4a;
+  border-radius: 9999px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+#retake-btn:hover {
+  border-color: #8b8fa8;
+  color: #e0e3ed;
+}
+
+#retake-btn:focus-visible {
+  outline: 2px solid #4a90d9;
+  outline-offset: 2px;
+}
+
 /* ── Utility ── */
 
 .hidden {
