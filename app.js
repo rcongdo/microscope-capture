@@ -78,6 +78,10 @@ async function init() {
 
 init();
 
-cameraSelect.addEventListener('change', () => {
-  startStream(cameraSelect.value);
+cameraSelect.addEventListener('change', async () => {
+  try {
+    await startStream(cameraSelect.value);
+  } catch (err) {
+    showError('Could not switch camera. Please try again or reload.');
+  }
 });
