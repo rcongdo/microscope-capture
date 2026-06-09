@@ -7,24 +7,32 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main id="app">
-    <div id="error-message" class="hidden" role="alert" aria-live="assertive"></div>
-
-    <div id="preview-area">
+  <div id="app">
+    <header id="top-bar">
+      <span id="app-title">Microscope Capture</span>
       <div id="camera-select-row">
-        <label for="camera-select">Camera:</label>
+        <label for="camera-select">Camera</label>
         <select id="camera-select"></select>
       </div>
-      <video id="preview" autoplay playsinline muted></video>
-      <canvas id="capture-canvas" class="hidden"></canvas>
-    </div>
+      <button id="info-btn" aria-label="Camera settings" aria-expanded="false">ⓘ</button>
+    </header>
 
-    <div id="capture-bar">
+    <div id="error-message" class="hidden" role="alert" aria-live="assertive"></div>
+
+    <video id="preview" autoplay playsinline muted></video>
+    <canvas id="capture-canvas" class="hidden"></canvas>
+
+    <footer id="bottom-bar">
       <input type="text" id="filename-input" aria-label="Filename" placeholder="filename" />
       <span class="ext-label">.png</span>
       <button id="capture-btn">Capture</button>
-    </div>
-  </main>
+    </footer>
+
+    <section id="info-panel" class="hidden" aria-label="Camera settings">
+      <h2>Camera Settings</h2>
+      <dl id="settings-grid"></dl>
+    </section>
+  </div>
 
   <script src="app.js"></script>
 </body>
