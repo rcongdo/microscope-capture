@@ -12,6 +12,7 @@ A lightweight browser app for capturing still images from a USB microscope. No i
 - Camera selector dropdown (handles multiple cameras automatically)
 - Capture a still image as PNG with one click
 - Custom filename with automatic timestamp fallback
+- **Camera info panel** — click ⓘ to see all settings reported by your camera (resolution, frame rate, exposure, focus, color temperature, and more)
 - Works entirely in the browser — no data leaves your device
 
 ## Browser Compatibility
@@ -29,9 +30,10 @@ A lightweight browser app for capturing still images from a USB microscope. No i
 
 1. Open the [live demo](https://rcongdo.github.io/microscope-capture) or download and open `index.html` locally
 2. Allow camera access when prompted
-3. Select your USB microscope from the camera dropdown
+3. Select your USB microscope from the camera dropdown in the top bar
 4. Enter a filename (or leave blank to use a timestamp)
 5. Click **Capture** — your browser will save the PNG
+6. Click **ⓘ** in the top bar to view all camera settings reported by your device
 
 ## Running Locally
 
@@ -55,7 +57,7 @@ open index.html   # macOS
 ## Files
 
 ```
-index.html   — page structure
-style.css    — dark-theme layout
-app.js       — camera and capture logic
+index.html   — page structure (three-zone layout: top bar / video / bottom bar)
+style.css    — dark-theme layout and styles
+app.js       — camera, capture, and info panel logic
 ```
