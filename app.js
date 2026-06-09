@@ -16,7 +16,7 @@ const SETTINGS_META = [
   { key: 'aspectRatio',          label: 'Aspect Ratio',    unit: ''    },
   { key: 'frameRate',            label: 'Frame Rate',      unit: 'fps' },
   { key: 'exposureMode',         label: 'Exposure Mode',   unit: ''    },
-  { key: 'exposureTime',         label: 'Exposure Time',   unit: 'ms'  },
+  { key: 'exposureTime',         label: 'Exposure Time',   unit: 'µs'  },
   { key: 'exposureCompensation', label: 'Exposure Comp.',  unit: 'EV'  },
   { key: 'brightness',           label: 'Brightness',      unit: ''    },
   { key: 'whiteBalanceMode',     label: 'White Balance',   unit: ''    },
@@ -40,7 +40,7 @@ function timestampFilename() {
 }
 
 function formatValue(key, value, unit) {
-  if (key === 'deviceId') return String(value).slice(0, 16) + '…';
+  if (key === 'deviceId') { const s = String(value); return s.length > 16 ? s.slice(0, 16) + '…' : s; }
   if (key === 'aspectRatio') return Number(value).toFixed(2);
   if (key === 'frameRate') return Number(value).toFixed(1) + (unit ? ' ' + unit : '');
   return String(value) + (unit ? ' ' + unit : '');
@@ -108,6 +108,7 @@ async function startStream(deviceId) {
   };
   currentStream = await navigator.mediaDevices.getUserMedia(constraints);
   video.srcObject = currentStream;
+  infoBtn.classList.remove('hidden');
 }
 
 async function populateCameraList() {
