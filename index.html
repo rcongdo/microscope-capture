@@ -20,9 +20,11 @@
     <div id="error-message" class="hidden" role="alert" aria-live="assertive"></div>
 
     <video id="preview" autoplay playsinline muted></video>
+    <img id="capture-preview" class="hidden" alt="Captured image" />
     <canvas id="capture-canvas" class="hidden"></canvas>
 
     <footer id="bottom-bar" role="contentinfo">
+      <button id="retake-btn" class="hidden">Retake</button>
       <input type="text" id="filename-input" aria-label="Filename" placeholder="filename" />
       <span class="ext-label">.png</span>
       <button id="capture-btn">Capture</button>
@@ -34,6 +36,7 @@
     </section>
   </div>
 
+  <script src="vendor/exifr.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
