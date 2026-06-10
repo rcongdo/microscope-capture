@@ -133,33 +133,38 @@ function toggleInfoPanel() {
 
 async function showExifPanel(blob, mimeType) {
   let rows = [];
-  // PNG captures (canvas fallback on Safari / unsupported cameras) have no EXIF
-  if (mimeType !== 'image/jpeg') {
-    rows = [{ label: 'EXIF', value: 'Not available — use Chrome or Edge for EXIF metadata.' }];
-    populateGrid(rows);
-    openInfoPanel();
-    return;
-  }
-  try {
-    const exif = await exifr.parse(blob, {
-      tiff: true, xmp: false, icc: false, iptc: false,
-      pick: ['Make', 'Model', 'ImageWidth', 'ImageHeight', 'ISO',
-             'ExposureTime', 'FNumber', 'FocalLength', 'WhiteBalance',
-             'BrightnessValue', 'Flash', 'ColorSpace', 'DateTimeOriginal'],
-    });
-    if (exif) {
-      const camera = [exif.Make, exif.Model].filter(Boolean).join(' ');
-      if (camera) rows.push({ label: 'Camera', value: camera });
-      EXIF_TAG_MAP.forEach(({ key, label }) => {
-        const formatted = formatExifValue(key, exif[key]);
-        if (formatted !== undefined) rows.push({ label, value: formatted });
+  // Try EXIF parsing only for JPEG (ImageCapture path)
+  if (mimeType === 'image/jpeg') {
+    try {
+      const exif = await exifr.parse(blob, {
+        tiff: true, xmp: false, icc: false, iptc: false,
+        pick: ['Make', 'Model', 'ImageWidth', 'ImageHeight', 'ISO',
+               'ExposureTime', 'FNumber', 'FocalLength', 'WhiteBalance',
+               'BrightnessValue', 'Flash', 'ColorSpace', 'DateTimeOriginal'],
       });
+      if (exif) {
+        const camera = [exif.Make, exif.Model].filter(Boolean).join(' ');
+        if (camera) rows.push({ label: 'Camera', value: camera });
+        EXIF_TAG_MAP.forEach(({ key, label }) => {
+          const formatted = formatExifValue(key, exif[key]);
+          if (formatted !== undefined) rows.push({ label, value: formatted });
+        });
+      }
+    } catch (_) {
+      // parse failed — fall through to stream settings
     }
-  } catch (_) {
-    // parse failed — fall through to no-EXIF message
+  }
+  // If no EXIF rows (PNG capture or camera doesn't embed EXIF), show stream settings
+  if (rows.length === 0) {
+    const track = currentStream && currentStream.getVideoTracks()[0];
+    const settings = track ? track.getSettings() : {};
+    SETTINGS_META.forEach(({ key, label, unit }) => {
+      if (settings[key] === undefined) return;
+      rows.push({ label, value: formatValue(key, settings[key], unit) });
+    });
   }
   if (rows.length === 0) {
-    rows = [{ label: 'EXIF', value: 'This camera does not report EXIF metadata.' }];
+    rows = [{ label: 'Info', value: 'No metadata available for this camera.' }];
   }
   populateGrid(rows);
   openInfoPanel();
@@ -246,8 +251,8 @@ async function capturePhoto() {
       const imageCapture = new ImageCapture(track);
       const blob = await imageCapture.takePhoto();
       return { blob, mimeType: blob.type || 'image/jpeg' };
-    } catch (_) {
-      // fall through to canvas
+    } catch (err) {
+      console.warn('ImageCapture.takePhoto() failed, falling back to canvas:', err);
     }
   }
   // Canvas fallback (Safari)
