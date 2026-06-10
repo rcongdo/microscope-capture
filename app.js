@@ -131,8 +131,15 @@ function toggleInfoPanel() {
   openInfoPanel();
 }
 
-async function showExifPanel(blob) {
+async function showExifPanel(blob, mimeType) {
   let rows = [];
+  // PNG captures (canvas fallback on Safari / unsupported cameras) have no EXIF
+  if (mimeType !== 'image/jpeg') {
+    rows = [{ label: 'EXIF', value: 'Not available — use Chrome or Edge for EXIF metadata.' }];
+    populateGrid(rows);
+    openInfoPanel();
+    return;
+  }
   try {
     const exif = await exifr.parse(blob, {
       tiff: true, xmp: false, icc: false, iptc: false,
@@ -152,7 +159,7 @@ async function showExifPanel(blob) {
     // parse failed — fall through to no-EXIF message
   }
   if (rows.length === 0) {
-    rows = [{ label: 'EXIF', value: 'Not available in this browser.' }];
+    rows = [{ label: 'EXIF', value: 'This camera does not report EXIF metadata.' }];
   }
   populateGrid(rows);
   openInfoPanel();
@@ -267,7 +274,7 @@ function enterCaptureMode(blob, mimeType) {
   video.classList.add('hidden');
   retakeBtn.classList.remove('hidden');
   captureBtn.textContent = 'Save';
-  showExifPanel(blob);
+  showExifPanel(blob, mimeType);
 }
 
 function exitCaptureMode() {
