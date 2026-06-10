@@ -69,7 +69,10 @@ function formatValue(key, value, unit) {
 
 function formatExifValue(key, value) {
   if (value === undefined || value === null) return undefined;
-  if (key === 'ExposureTime') return value >= 1 ? `${value}s` : `1/${Math.round(1 / value)}s`;
+  if (key === 'ExposureTime') {
+    if (value === 0) return '0s';
+    return value >= 1 ? `${value}s` : `1/${Math.round(1 / value)}s`;
+  }
   if (key === 'FNumber') return `f/${value}`;
   if (key === 'FocalLength') return `${value} mm`;
   if (key === 'WhiteBalance') return value === 0 ? 'Auto' : value === 1 ? 'Manual' : String(value);
