@@ -1,14 +1,19 @@
 const video = document.getElementById('preview');
+const capturePreview = document.getElementById('capture-preview');
 const canvas = document.getElementById('capture-canvas');
 const cameraSelect = document.getElementById('camera-select');
 const filenameInput = document.getElementById('filename-input');
+const extLabel = document.querySelector('.ext-label');
 const captureBtn = document.getElementById('capture-btn');
+const retakeBtn = document.getElementById('retake-btn');
 const errorMessage = document.getElementById('error-message');
 const infoBtn = document.getElementById('info-btn');
 const infoPanel = document.getElementById('info-panel');
 const settingsGrid = document.getElementById('settings-grid');
 
 let currentStream = null;
+let captureBlob = null;      // non-null while in capture mode
+let captureMimeType = 'image/png';
 
 const SETTINGS_META = [
   { key: 'width',                label: 'Width',           unit: 'px'  },
@@ -33,6 +38,22 @@ const SETTINGS_META = [
   { key: 'deviceId',             label: 'Device ID',       unit: ''    },
 ];
 
+const EXIF_TAG_MAP = [
+  { key: 'ImageWidth',      label: 'Width' },
+  { key: 'ImageHeight',     label: 'Height' },
+  { key: 'ISO',             label: 'ISO' },
+  { key: 'ExposureTime',    label: 'Exposure Time' },
+  { key: 'FNumber',         label: 'F-Number' },
+  { key: 'FocalLength',     label: 'Focal Length' },
+  { key: 'WhiteBalance',    label: 'White Balance' },
+  { key: 'BrightnessValue', label: 'Brightness' },
+  { key: 'Flash',           label: 'Flash' },
+  { key: 'ColorSpace',      label: 'Color Space' },
+  { key: 'DateTimeOriginal',label: 'Captured At' },
+];
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
 function timestampFilename() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
@@ -46,37 +67,95 @@ function formatValue(key, value, unit) {
   return String(value) + (unit ? ' ' + unit : '');
 }
 
+function formatExifValue(key, value) {
+  if (value === undefined || value === null) return undefined;
+  if (key === 'ExposureTime') return value >= 1 ? `${value}s` : `1/${Math.round(1 / value)}s`;
+  if (key === 'FNumber') return `f/${value}`;
+  if (key === 'FocalLength') return `${value} mm`;
+  if (key === 'WhiteBalance') return value === 0 ? 'Auto' : value === 1 ? 'Manual' : String(value);
+  if (key === 'ColorSpace') return value === 1 ? 'sRGB' : value === 65535 ? 'Uncalibrated' : String(value);
+  if (key === 'Flash') return value === 0 ? 'No flash' : String(value);
+  if (key === 'DateTimeOriginal') return value instanceof Date ? value.toLocaleString() : String(value);
+  if (key === 'ImageWidth' || key === 'ImageHeight') return `${value} px`;
+  return String(value);
+}
+
+function populateGrid(rows) {
+  settingsGrid.innerHTML = '';
+  rows.forEach(({ label, value }) => {
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = value;
+    settingsGrid.appendChild(dt);
+    settingsGrid.appendChild(dd);
+  });
+}
+
+// ── Info panel ───────────────────────────────────────────────────────────────
+
 function hideInfoPanel() {
   infoPanel.classList.add('hidden');
   infoBtn.classList.remove('active');
   infoBtn.setAttribute('aria-expanded', 'false');
 }
 
-function showInfoPanel() {
-  const track = currentStream && currentStream.getVideoTracks()[0];
-  const settings = track ? track.getSettings() : {};
-  settingsGrid.innerHTML = '';
-  SETTINGS_META.forEach(({ key, label, unit }) => {
-    if (settings[key] === undefined) return;
-    const dt = document.createElement('dt');
-    dt.textContent = label;
-    const dd = document.createElement('dd');
-    dd.textContent = formatValue(key, settings[key], unit);
-    settingsGrid.appendChild(dt);
-    settingsGrid.appendChild(dd);
-  });
+function openInfoPanel() {
   infoPanel.classList.remove('hidden');
   infoBtn.classList.add('active');
   infoBtn.setAttribute('aria-expanded', 'true');
 }
 
 function toggleInfoPanel() {
-  if (infoPanel.classList.contains('hidden')) {
-    showInfoPanel();
-  } else {
+  if (!infoPanel.classList.contains('hidden')) {
     hideInfoPanel();
+    return;
   }
+  // In capture mode the grid is already populated with EXIF — just open
+  if (captureBlob) {
+    openInfoPanel();
+    return;
+  }
+  // Live mode — populate stream settings then open
+  const track = currentStream && currentStream.getVideoTracks()[0];
+  const settings = track ? track.getSettings() : {};
+  const rows = [];
+  SETTINGS_META.forEach(({ key, label, unit }) => {
+    if (settings[key] === undefined) return;
+    rows.push({ label, value: formatValue(key, settings[key], unit) });
+  });
+  populateGrid(rows);
+  openInfoPanel();
 }
+
+async function showExifPanel(blob) {
+  let rows = [];
+  try {
+    const exif = await exifr.parse(blob, {
+      tiff: true, xmp: false, icc: false, iptc: false,
+      pick: ['Make', 'Model', 'ImageWidth', 'ImageHeight', 'ISO',
+             'ExposureTime', 'FNumber', 'FocalLength', 'WhiteBalance',
+             'BrightnessValue', 'Flash', 'ColorSpace', 'DateTimeOriginal'],
+    });
+    if (exif) {
+      const camera = [exif.Make, exif.Model].filter(Boolean).join(' ');
+      if (camera) rows.push({ label: 'Camera', value: camera });
+      EXIF_TAG_MAP.forEach(({ key, label }) => {
+        const formatted = formatExifValue(key, exif[key]);
+        if (formatted !== undefined) rows.push({ label, value: formatted });
+      });
+    }
+  } catch (_) {
+    // parse failed — fall through to no-EXIF message
+  }
+  if (rows.length === 0) {
+    rows = [{ label: 'EXIF', value: 'Not available in this browser.' }];
+  }
+  populateGrid(rows);
+  openInfoPanel();
+}
+
+// ── Error handling ────────────────────────────────────────────────────────────
 
 function showError(message) {
   if (currentStream) {
@@ -92,6 +171,8 @@ function showError(message) {
   hideInfoPanel();
 }
 
+// ── Camera stream ─────────────────────────────────────────────────────────────
+
 async function getDevices() {
   const devices = await navigator.mediaDevices.enumerateDevices();
   return devices.filter(d => d.kind === 'videoinput');
@@ -104,7 +185,7 @@ async function startStream(deviceId) {
   }
   const constraints = {
     video: deviceId ? { deviceId: { exact: deviceId } } : true,
-    audio: false
+    audio: false,
   };
   currentStream = await navigator.mediaDevices.getUserMedia(constraints);
   video.srcObject = currentStream;
@@ -145,9 +226,82 @@ async function init() {
   }
 }
 
+// ── Capture ───────────────────────────────────────────────────────────────────
+
+async function capturePhoto() {
+  const track = currentStream && currentStream.getVideoTracks()[0];
+  // Try ImageCapture API first (Chrome / Edge)
+  if (track && typeof ImageCapture !== 'undefined') {
+    try {
+      const imageCapture = new ImageCapture(track);
+      const blob = await imageCapture.takePhoto();
+      return { blob, mimeType: blob.type || 'image/jpeg' };
+    } catch (_) {
+      // fall through to canvas
+    }
+  }
+  // Canvas fallback (Safari)
+  const settings = track ? track.getSettings() : {};
+  const width = settings.width || video.videoWidth;
+  const height = settings.height || video.videoHeight;
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (!blob) { reject(new Error('canvas toBlob failed')); return; }
+      resolve({ blob, mimeType: 'image/png' });
+    }, 'image/png');
+  });
+}
+
+function enterCaptureMode(blob, mimeType) {
+  captureBlob = blob;
+  captureMimeType = mimeType;
+  extLabel.textContent = mimeType === 'image/jpeg' ? '.jpg' : '.png';
+  capturePreview.src = URL.createObjectURL(blob);
+  capturePreview.classList.remove('hidden');
+  video.classList.add('hidden');
+  retakeBtn.classList.remove('hidden');
+  captureBtn.textContent = 'Save';
+  showExifPanel(blob);
+}
+
+function exitCaptureMode() {
+  URL.revokeObjectURL(capturePreview.src);
+  capturePreview.src = '';
+  capturePreview.classList.add('hidden');
+  captureBlob = null;
+  video.classList.remove('hidden');
+  retakeBtn.classList.add('hidden');
+  captureBtn.textContent = 'Capture';
+  extLabel.textContent = '.png';
+  filenameInput.value = timestampFilename();
+  hideInfoPanel();
+}
+
+function saveCapture() {
+  const rawName = filenameInput.value.trim() || timestampFilename();
+  const filename = rawName.replace(/[/\\:*?"<>|]/g, '_');
+  const ext = captureMimeType === 'image/jpeg' ? '.jpg' : '.png';
+  const url = URL.createObjectURL(captureBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  exitCaptureMode();
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
 init();
 
 infoBtn.addEventListener('click', toggleInfoPanel);
+
+retakeBtn.addEventListener('click', exitCaptureMode);
 
 cameraSelect.addEventListener('change', async () => {
   try {
@@ -157,35 +311,18 @@ cameraSelect.addEventListener('change', async () => {
   }
 });
 
-captureBtn.addEventListener('click', () => {
+captureBtn.addEventListener('click', async () => {
+  if (captureBlob) {
+    // Capture mode — save the captured image
+    saveCapture();
+    return;
+  }
+  // Live mode — take a photo
   if (!currentStream || video.readyState < 2) return;
-
-  const rawName = filenameInput.value.trim() || timestampFilename();
-  const filename = rawName.replace(/[/\\:*?"<>|]/g, '_');
-
-  const track = currentStream && currentStream.getVideoTracks()[0];
-  const settings = track ? track.getSettings() : {};
-  const width = settings.width || video.videoWidth;
-  const height = settings.height || video.videoHeight;
-
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, width, height);
-
-  canvas.toBlob(blob => {
-    if (!blob) {
-      showError('Capture failed: could not encode the frame. Please try again.');
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    filenameInput.value = timestampFilename();
-  }, 'image/png');
+  try {
+    const { blob, mimeType } = await capturePhoto();
+    enterCaptureMode(blob, mimeType);
+  } catch (_) {
+    showError('Capture failed: could not encode the frame. Please try again.');
+  }
 });
